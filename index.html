@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تشخيص الاختناق الأيضي الجذري | Root Metabolic Bottleneck Analyzer</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Naskh+Arabic:wght@400;500;600;700&family=Noto+Sans+Arabic:wght@300;400;500;600;700&display=swap');
+        
+        :root {
+            --mitochondria: #f59e0b;
+            --cytoplasm: #3b82f6;
+            --nucleus: #ec4899;
+            --membrane: #10b981;
+            --blood: #ef4444;
+            --bg-dark: #0f172a;
+            --card-bg: #1e293b;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Sans Arabic', 'Noto Naskh Arabic', sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.8;
+            direction: rtl;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        header {
+            text-align: center;
+            padding: 3rem 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            margin-bottom: 2rem;
+        }
+        
+        h1 {
+            font-family: 'Noto Naskh Arabic', serif;
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.75rem;
+            background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            line-height: 1.4;
+        }
+        
+        .concept-box {
+            background: rgba(251, 191, 36, 0.1);
+            border: 1px solid rgba(251, 191, 36, 0.3);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 2rem 0;
+            text-align: right;
+        }
+        
+        .concept-title {
+            color: #fbbf24;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            font-size: 1.1rem;
+        }
+        
+        .metabolic-flow {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 2rem;
+            margin: 2rem 0;
+            overflow-x: auto;
+        }
+        
+        .flow-title {
+            text-align: center;
+            margin-bottom: 1.5rem;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+        
+        .enzyme-chain {
+            display: flex;
+            flex-direction: row-reverse;
+            align-items: center;
+            gap: 0.5rem;
+            min-width: 800px;
+            padding: 1rem;
+        }
+        
+        .enzyme-node {
+            background: rgba(255,255,255,0.05);
+            border: 2px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 1rem;
+            text-align: center;
+            min-width: 120px;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+        
+        .enzyme-node:hover {
+            transform: translateY(-5px);
+            border-color: var(--mitochondria);
+        }
+        
+        .enzyme-node.root-cause {
+            border-color: #ef4444;
+            background: rgba(239, 68, 68, 0.1);
+            box-shadow: 0 0 20px rgba(239, 68, 68, 0.3);
+        }
+        
+        .enzyme-name {
+            font-weight: 700;
+            font-size: 0.9rem;
+            margin-bottom: 0.25rem;
+        }
+        
+        .enzyme-b {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+        
+        .enzyme-location {
+            font-size: 0.65rem;
+            padding: 0.2rem 0.5rem;
+            border-radius: 10px;
+            margin-top: 0.5rem;
+            display: inline-block;
+        }
+        
+        .arrow {
+            color: var(--text-secondary);
+            font-size: 1.5rem;
+        }
+        
+        .bottleneck-indicator {
+            position: absolute;
+            top: -10px;
+            right: 50%;
+            transform: translateX(50%);
+            background: #ef4444;
+            color: white;
+            padding: 0.2rem 0.6rem;
+            border-radius: 10px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            display: none;
+        }
+        
+        .enzyme-node.root-cause .bottleneck-indicator {
+            display: block;
+        }
+        
+        .question-card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 1.5rem;
+            border: 1px solid rgba(255,255,255,0.05);
+            display: none;
+            animation: slideIn 0.5s ease;
+        }
+        
+        .question-card.active {
+            display: block;
+        }
+        
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .question-number {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+            text-align: right;
+        }
+        
+        .question-text {
+            font-family: 'Noto Naskh Arabic', serif;
+            font-size: 1.4rem;
+            margin-bottom: 1.5rem;
+            line-height: 1.6;
+            text-align: right;
+        }
+        
+        .options {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+        
+        .option {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 1rem 1.25rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: right;
+        }
+        
+        .option:hover {
+            background: rgba(255,255,255,0.08);
+            border-color: rgba(255,255,255,0.2);
+            transform: translateX(-4px);
+        }
+        
+        .option.selected {
+            background: rgba(245, 158, 11, 0.15);
+            border-color: var(--mitochondria);
+        }
+        
+        .nav-buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 2rem;
+            gap: 1rem;
+            flex-direction: row-reverse;
+        }
+        
+        button {
+            padding: 0.875rem 2rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: 'Noto Sans Arabic', sans-serif;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: white;
+            flex: 1;
+        }
+        
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px -5px rgba(245, 158, 11, 0.4);
+        }
+        
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .btn-secondary {
+            background: rgba(255,255,255,0.05);
+            color: var(--text-primary);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .results-container {
+            display: none;
+            animation: fadeIn 0.8s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        .root-cause-card {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, var(--card-bg) 100%);
+            border-right: 4px solid #ef4444;
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            text-align: right;
+        }
+        
+        .root-title {
+            font-family: 'Noto Naskh Arabic', serif;
+            font-size: 1.75rem;
+            color: #ef4444;
+            margin-bottom: 1rem;
+        }
+        
+        .enzyme-highlight {
+            background: rgba(239, 68, 68, 0.2);
+            padding: 0.2rem 0.6rem;
+            border-radius: 6px;
+            font-weight: 700;
+        }
+        
+        .cascade-box {
+            background: rgba(255,255,255,0.03);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+        }
+        
+        .cascade-title {
+            color: #fbbf24;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-direction: row-reverse;
+        }
+        
+        .cascade-list {
+            list-style: none;
+        }
+        
+        .cascade-list li {
+            padding: 0.75rem 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            flex-direction: row-reverse;
+        }
+        
+        .cascade-list li:before {
+            content: "↓";
+            color: #ef4444;
+            font-weight: bold;
+        }
+        
+        .cascade-list li:last-child {
+            border-bottom: none;
+        }
+        
+        .fix-protocol {
+            background: rgba(16, 185, 129, 0.1);
+            border-right: 4px solid #10b981;
+            border-radius: 16px;
+            padding: 2rem;
+            margin: 2rem 0;
+            text-align: right;
+        }
+        
+        .fix-title {
+            font-family: 'Noto Naskh Arabic', serif;
+            font-size: 1.5rem;
+            color: #10b981;
+            margin-bottom: 1rem;
+        }
+        
+        .fix-step {
+            background: rgba(0,0,0,0.2);
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+            display: flex;
+            gap: 1rem;
+            flex-direction: row-reverse;
+            align-items: start;
+        }
+        
+        .step-number {
+            background: #10b981;
+            color: white;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+        
+        .step-content h4 {
+            color: var(--text-primary);
+            margin-bottom: 0.25rem;
+        }
+        
+        .step-content p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+        
+        .warning-box {
+            background: rgba(245, 158, 11, 0.1);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 2rem 0;
+            text-align: right;
+        }
+        
+        .warning-title {
+            color: #f59e0b;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-direction: row-reverse;
+        }
+        
+        .restart-btn {
+            display: block;
+            width: 100%;
+            max-width: 300px;
+            margin: 3rem auto 0;
+            padding: 1rem;
+            background: transparent;
+            border: 2px solid rgba(255,255,255,0.2);
+            color: var(--text-primary);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: 'Noto Sans Arabic', sans-serif;
+        }
+        
+        .restart-btn:hover {
+            background: rgba(255,255,255,0.05);
+            border-color: rgba(255,255,255,0.4);
+        }
+        
+        @media (max-width: 768px) {
+            .enzyme-chain {
+                flex-direction: column;
+                min-width: auto;
+            }
+            .arrow {
+                transform: rotate(90deg);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>محلل الاختناق الأيضي الجذري<br>Root Metabolic Bottleneck Analyzer</h1>
+            <p style="color: var(--text-secondary); max-width: 700px; margin: 0 auto;">
+                بدلاً من معالجة الأعراض في جميع المراحل الستة، نحدد الخطوة الإنزيمية الأساسية التي عند تصحيحها، يتدفق باقي النظام تلقائياً
+            </p>
+        </header>
+
+        <div class="concept-box">
+            <div class="concept-title">المبدأ العلاجي: اكتشاف نقطة الاختناق</div>
+            <p>النواقل العصبية لا تفشل عشوائياً. هناك خطوة إنزيمية واحدة ( bottleneck) تعتمد على فيتامين ب محدد، وعندما تتوقف، ينهار كل ما بعدها كصفوف الدومينو. حدد الاختناق، عالجه، وستتدفق بقية العمليات الأيضية.</p>
+        </div>
+
+        <div class="metabolic-flow">
+            <div class="flow-title">تدفق الطاقة والنواقل العصبية - من الجذر إلى الفرع</div>
+            <div class="enzyme-chain" id="enzymeChain">
+                <div class="enzyme-node" data-enzyme="pyruvate">
+                    <div class="bottleneck-indicator">الاختناق</div>
+                    <div class="enzyme-name">Pyruvate Dehydrogenase</div>
+                    <div class="enzyme-b">فيتامين B1</div>
+                    <div class="enzyme-location" style="background: var(--mitochondria); color: white;">الميتوكوندريا</div>
+                </div>
+                <div class="arrow">←</div>
+                
+                <div class="enzyme-node" data-enzyme="tca">
+                    <div class="bottleneck-indicator">الاختناق</div>
+                    <div class="enzyme-name">α-Ketoglutarate DH</div>
+                    <div class="enzyme-b">فيتامين B1</div>
+                    <div class="enzyme-location" style="background: var(--mitochondria); color: white;">الميتوكوندريا</div>
+                </div>
+                <div class="arrow">←</div>
+                
+                <div class="enzyme-node" data-enzyme="etc">
+                    <div class="bottleneck-indicator">الاختناق</div>
+                    <div class="enzyme-name">Electron Transport Chain</div>
+                    <div class="enzyme-b">B2, B3, B5</div>
+                    <div class="enzyme-location" style="background: var(--mitochondria); color: white;">الميتوكوندريا</div>
+                </div>
+                <div class="arrow">←</div>
+                
+                <div class="enzyme-node" data-enzyme="methylation">
+                    <div class="bottleneck-indicator">الاختناق</div>
+                    <div class="enzyme-name">Methionine Synthase</div>
+                    <div class="enzyme-b">B9, B12</div>
+                    <div class="enzyme-location" style="background: var(--cytoplasm); color: white;">السيتوبلازم</div>
+                </div>
+                <div class="arrow">←</div>
+                
+                <div class="enzyme-node" data-enzyme="plp">
+                    <div class="bottleneck-indicator">الاختناق</div>
+                    <div class="enzyme-name">GAD / AADC</div>
+                    <div class="enzyme-b">فيتامين B6 (PLP)</div>
+                    <div class="enzyme-location" style="background: var(--cytoplasm); color: white;">السيتوبلازم</div>
+                </div>
+                <div class="arrow">←</div>
+                
+                <div class="enzyme-node" data-enzyme="mao">
+                    <div class="bottleneck-indicator">الاختناق</div>
+                    <div class="enzyme-name">MAO-A / MAO-B</div>
+                    <div class="enzyme-b">فيتامين B2 (FAD)</div>
+                    <div class="enzyme-location" style="background: var(--membrane); color: white;">الغشاء الميتوكوندري</div>
+                </div>
+            </div>
+        </div>
+
+        <div id="questionnaire"></div>
+
+        <div class="results-container" id="results">
+            <div class="root-cause-card">
+                <div class="root-title">السبب الجذري المحدد: <span id="rootEnzyme" class="enzyme-highlight"></span></div>
+                <p id="rootDescription" style="line-height: 1.8; margin-bottom: 1rem;"></p>
+                
+                <div style="background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 8px; margin: 1rem 0;">
+                    <strong>الموقع الخلوي:</strong> <span id="rootLocation"></span><br>
+                    <strong>الفيتامين الأساسي:</strong> <span id="rootVitamin" style="color: #fbbf24; font-weight: 700;"></span><br>
+                    <strong>المرحلة الصينية المقابلة:</strong> <span id="rootStage"></span>
+                </div>
+            </div>
+
+            <div class="cascade-box">
+                <div class="cascade-title">
+                    <span>تأثير الدومينو - الانهيار المتتالي</span>
+                    <span style="font-size: 1.5rem;">🌊</span>
+                </div>
+                <p style="margin-bottom: 1rem; color: var(--text-secondary);">عندما يفشل هذا الإنزيم، يحدث ما يلي:</p>
+                <ul class="cascade-list" id="cascadeList"></ul>
+            </div>
+
+            <div class="fix-protocol">
+                <div class="fix-title">بروتوكول المعالجة الموجهة</div>
+                <p style="margin-bottom: 1.5rem; color: var(--text-secondary);">لا تعالج جميع الأعراض. ركز على فك الاختناق:</p>
+                <div id="fixSteps"></div>
+            </div>
+
+            <div class="warning-box">
+                <div class="warning-title">
+                    <span>تحذير سريري مهم</span>
+                    <span>⚠️</span>
+                </div>
+                <p id="clinicalWarning"></p>
+            </div>
+
+            <button class="restart-btn" onclick="restartAssessment()">إعادة التحليل</button>
+        </div>
+    </div>
+
+    <script>
+        const enzymeData = {
+            pyruvate: {
+                name: 'Pyruvate Dehydrogenase (PDH)',
+                arabicName: 'إنزيم بيروفيت ديهيدروجيناز',
+                vitamin: 'B1 (Thiamine Pyrophosphate - TPP)',
+                location: 'الميتوكوندريا - بوابة دخول الجلوكوز',
+                stage: 'تاييانغ (الخارج)',
+                description: 'هذا هو المدخل الرئيسي للطاقة. يحول البيروفيت (من تحلل السكر) إلى أسيتيل-كوا لدخول دورة كريبس. عندما يتوقف، يتراكم البيروفيت ويتحول إلى حمض اللاكتيك (حموضة)، ويفشل إنتاج أستيل كولين.',
+                cascade: [
+                    'تراكم حمض اللاكتيك → حموضة خلوية → إرهاق عضلي وإدراكي',
+                    'نقص أسيتيل-كوا → فشل دورة كريبس → انخفاض ATP العصبية',
+                    'نقص أسيتيل كولين → ضعف عصبي عضلي، ضباب ذهني، فشل الذاكرة',
+                    'تراكم البيروفيت → استنزاف NAD+ → اضطرابات طاقة إضافية',
+                    'الخلايا العصبية تفضل الجلوكوز - فهي الأكثر تضرراً'
+                ],
+                fix: [
+                    { step: 1, title: 'B1 فوري', desc: '300-600mg يومياً من الثيامين، مقسمة على جرعات. استخدم Allithiamine (lipid-soluble) للاختراق العصبي الأفضل.' },
+                    { step: 2, title: 'منع اللاكتيك', desc: 'أكسجين، مغنيسيوم (cofactor للـ PDH)، حمض ألفا-ليبويك لتحسين دورة البيروفيت.' },
+                    { step: 3, title: 'لا تكثف B2/B3 بعد', desc: 'حتى يتم إصلاح PDH، زيادة B2/B3 ستزيد من الطلب على أسيتيل-كوا غير الموجود.' }
+                ],
+                warning: 'نقص B1 الشديد (Wernicke\'s) طارئ عصبي. يحتاج إلى B1 وريدي فوراً. لا تعطي جلوكوز IV بدون B1 - سيقتل الخلايا العصبية.',
+                downstream: ['tca', 'etc', 'methylation', 'plp', 'mao']
+            },
+            
+            tca: {
+                name: 'α-Ketoglutarate Dehydrogenase (α-KGDH)',
+                arabicName: 'ألفا-كيتوجلوتارات ديهيدروجيناز',
+                vitamin: 'B1 (TPP), B2 (FAD), B3 (NAD+), B5 (CoA)',
+                location: 'الميتوكوندريا - دورة كريبس',
+                stage: 'شاويانغ (المحور)',
+                description: 'نقطة التحكم الرئيسية في دورة كريبس. يحول α-ketoglutarate إلى Succinyl-CoA. عندما يتوقف، يتراكم α-ketoglutarate ويتحول إلى الجلوتامات (Excitotoxicity).',
+                cascade: [
+                    'تراكم α-ketoglutarate → تحويل إلى Glutamate → سمية تحفيزية',
+                    'نقص Succinyl-CoA → تعطل دورة حمض الستريك → انخفاض ATP',
+                    'اضطراب توازن Glutamate/GABA → اختلاجات، قلق، انهيار عصبي',
+                    'نقص precursors للدوبامين والسيروتونين → اكتئاب، فشل تنفيذي',
+                    'الأكسدة الميتوكوندريالية تفشل → ROS، التهاب عصبي'
+                ],
+                fix: [
+                    { step: 1, title: 'B1 + B5 معاً', desc: 'B1 لـ TPP، B5 لـ CoA. بدونهما، لا يمكن لـ α-KGDH العمل.' },
+                    { step: 2, title: 'كبح الجلوتامات', desc: 'المغنيسيوم (NMDA blocker)، B6 (لتحويل Glu→GABA)، تجنب MSG والأسبارتام.' },
+                    { step: 3, title: 'دعم مضادات الأكسدة', desc: 'CoQ10، NAC، ALA لحماية الميتوكوندريا من ROS الناتج عن الفشل الأيضي.' }
+                ],
+                warning: 'هذا الإنزيم حساس جداً للأكسدة. في مرض ألزهايمر وباركنسون، يكون α-KGDH معطلاً بنسبة 50-70%.',
+                downstream: ['etc', 'methylation', 'plp', 'mao']
+            },
+            
+            etc: {
+                name: 'Electron Transport Chain (Complex I & II)',
+                arabicName: 'سلسلة نقل الإلكترونات',
+                vitamin: 'B2 (FADH2), B3 (NADH), B5 (CoQ10 synthesis)',
+                location: 'الميتوكوندريا - الغشاء الداخلي',
+                stage: 'يانغمينغ (الحرارة)',
+                description: 'المولد الرئيسي للـ ATP. يستخدم NADH وFADH2 لإنشاء gradient البروتونات. فشله يسبب "انقطاع التيار" في كل الخلايا.',
+                cascade: [
+                    'انخفاض ATP العام → فشل مضخات الأيونات (Na+/K+) → موت خلوي',
+                    'تراكم NADH → احمرار التمثيل الغذائي (يانغمينغ) → حرارة داخلية',
+                    'فشل تجديد NAD+ → شلل Glycolysis → استنزاف طاقة كامل',
+                    'زيادة ROS (الجذور الحرة) → أكسدة الدهون والبروتينات',
+                    'فشل إعادة امتصاص السيروتونين والدوبامين (يحتاج ATP)'
+                ],
+                fix: [
+                    { step: 1, title: 'Riboflavin-5-Phosphate', desc: 'B2 النشط مباشرة. 100-400mg. ضروري لـ Complex I وII و succinate dehydrogenase.' },
+                    { step: 2, title: 'Niacinamide (B3)', desc: '100-500mg لتجديد NAD+ بدون تأثيرات vasodilation (الاحمرار).' },
+                    { step: 3, title: 'CoQ10 + PQQ', desc: 'CoQ10 (100-200mg) لنقل الإلكترونات، PQQ لتحفيز biogenesis الميتوكوندريا.' }
+                ],
+                warning: 'فشل ETC يسبب "الحرارة الخاطئة" - يشعر المريض بالحرارة لكن قياسات الحرارة طبيعية. هذا يانغمينغ صرف.',
+                downstream: ['methylation', 'plp', 'mao']
+            },
+            
+            methylation: {
+                name: 'Methionine Synthase + MTHFR',
+                arabicName: 'إنزيم الميثيونين سينثيز ومثيلة حمض الفوليك',
+                vitamin: 'B12 (Methylcobalamin), B9 (5-MTHF), B6 (as cofactor)',
+                location: 'السيتوبلازم والنواة',
+                stage: 'شاوين (العمق)',
+                description: 'تنتج SAMe (المانح العالمي للميثيل). SAMe يميثل النواقل العصبية، والDNA، والفوسفوليبids. فشلها = فشل إيبيجينيتي وعصبي.',
+                cascade: [
+                    'نقص SAMe → فشل ميثيلة الدوبامين والسيروتونين → اكتئاب',
+                    'تراكم Homocysteine → سمية vascular وعصبية → جلطات دموية دقيقة',
+                    'فشل ميثيلة DNA → تغيرات إيبيجينيتية → سرطان، شيخوخة سريعة',
+                    'نقص Phosphatidylcholine → تلف غشاء الخلية العصبية',
+                    'فشل إنتاج Melatonin → اضطراب النوم العميق (شاوين)'
+                ],
+                fix: [
+                    { step: 1, title: 'Methylated Bs فقط', desc: '5-MTHF (B9) 1000mcg + Methylcobalamin (B12) 5000mcg. لا تستخدم الأشكال الاصطناعية (folic acid, cyanocobalamin).' },
+                    { step: 2, title: 'TMG (Trimethylglycine)', desc: '500-2000mg. طريق بديل للميثيلة عبر BHMT، يتجاوز MTHFR المعطلة.' },
+                    { step: 3, title: 'B6 + Magnesium', desc: 'B6 (P5P) 50mg + Mag 400mg. ضروريان لتحويل Homocysteine إلى Cysteine.' }
+                ],
+                warning: 'MTHFR polymorphism موجود في 40-60% من السكان. إذا كان لديك تاريخ عائلي من الاكتئاب أو الجلطات، افترض وجوده.',
+                downstream: ['plp', 'mao']
+            },
+            
+            plp: {
+                name: 'GAD + AADC (PLP-Dependent)',
+                arabicName: 'إنزيمات ناقلات الكربوكسيل والأروماتية',
+                vitamin: 'B6 (Pyridoxal-5-Phosphate - PLP)',
+                location: 'السيتوبلازم - المحيط العصبي',
+                stage: 'جيويين (الانهيار)',
+                description: 'GAD يصنع GABA (المثبط الرئيسي). AADC يصنع الدوبامين والسيروتونين. PLP هو cofactor لـ 100+ إنزيم. فشله = فشل في التثبيط والإثارة.',
+                cascade: [
+                    'فشل GAD → Glutamate يرتفع، GABA ينخفض → صرع، قلق، أرق',
+                    'فشل AADC → لا يمكن صنع الدوبامين/السيروتونين من precursors',
+                    'نقص Heme synthesis (أيضاً PLP-dependent) → فقر دم، ضعف أكسجة',
+                    'اضطراب Glycine (NMDA co-agonist) → excitotoxicity إضافية',
+                    'فشل تحلل Glycogen → هبوط سكر دموي متكرر'
+                ],
+                fix: [
+                    { step: 1, title: 'P5P وليس Pyridoxine', desc: 'P5P (الشكل النشط) 50-100mg. Pyridoxine العادي يحتاج تحويلاً وقد يسبب سمية عصبية في الجرعات العالية.' },
+                    { step: 2, title: 'Magnesium + Zinc', desc: 'Mg 400mg + Zn 30mg. كلاهما ضروري لعمل PLP واستقراره.' },
+                    { step: 3, title: 'B2 لتحويل B6', desc: 'B2 (FAD) ضروري لتحويل Pyridoxine إلى P5P. 25mg B2 مع B6.' }
+                ],
+                warning: 'B6 deficiency يظهر في 50% من مرضى الاكتئاب. ولكن الجرعات العالية (>200mg) يمكن أن تسبب سمية عصبية عكسية.',
+                downstream: ['mao']
+            },
+            
+            mao: {
+                name: 'MAO-A / MAO-B',
+                arabicName: 'أحادي أمين أوكسيديز',
+                vitamin: 'B2 (FAD - Flavin Adenine Dinucleotide)',
+                location: 'الغشاء الخارجي للميتوكوندريا',
+                stage: 'شاويانغ (التحول)',
+                description: 'تتحكم في تحلل الدوبامين والسيروتونين والنورإبينفرين. ليست "سيئة" - ضرورية لإعادة التدوير. لكن FAD deficiency يبطئها → تراكم catecholamines → toxicity.',
+                cascade: [
+                    'بطء MAO → تراكم الدوبامين/السيروتونين → syndrome serotonergic أو dopaminergic',
+                    'فشل تحلل Tyramine → نوبات ضغط حاد (hypertensive crisis)',
+                    'تراكم metabolites السامة → oxidative stress في الدماغ',
+                    'اضطراب دورة النوم-اليقظة (MAO ينظمها)',
+                    'تراكم Phenylethylamine (trace amine) → psychosis'
+                ],
+                fix: [
+                    { step: 1, title: 'Riboflavin-5-Phosphate', desc: 'FAD هو prosthetic group لـ MAO. 100-200mg B2 يستعيد النشاط الطبيعي.' },
+                    { step: 2, title: 'لا تستخدم مثبطات MAO', desc: 'إذا كان المشكل هو FAD deficiency وليس زيادة MAO، فالمثبطات تزيد الطين بلة.' },
+                    { step: 3, title: 'Co-factors', desc: 'Iron (heme في MAO)، NAD+ (B3) للشكل oxidized من FAD.' }
+                ],
+                warning: 'MAO-A في الدماغ يتحكم في المزاج. نقص B2 يقلل MAO-A → اكتئاب مقنع (pseudo-depression) بسبب toxicity السيروتونين.',
+                downstream: []
+            }
+        };
+
+        const questions = [
+            {
+                id: 'energy',
+                text: "ما هي طبيعة إرهاقك الأساسي؟",
+                options: [
+                    { text: "إرهاق عضري مع حموضة عضلية، أشعر وكأن جسمي 'حامض'", score: { pyruvate: 3, tca: 1, etc: 0, methylation: 0, plp: 0, mao: 0 } },
+                    { text: "إرهاق عصبي/ذهني مع overthinking وقلق داخلي", score: { pyruvate: 0, tca: 3, etc: 1, methylation: 0, plp: 2, mao: 0 } },
+                    { text: "إرهاق مع حرارة داخلية، عطش، عرق ليلي", score: { pyruvate: 0, tca: 0, etc: 3, methylation: 1, plp: 0, mao: 0 } },
+                    { text: "إرهاق عميق، بارد، يحتاج لنوم طويل ولا يريح", score: { pyruvate: 0, tca: 0, etc: 0, methylation: 3, plp: 0, mao: 0 } },
+                    { text: "إرهاق مع اختلاجات، رعشة، صعوبة في الاسترخاء", score: { pyruvate: 0, tca: 1, etc: 0, methylation: 0, plp: 3, mao: 0 } },
+                    { text: "إرهاق متناوب، يأتي ويذهب مع تقلبات مزاجية", score: { pyruvate: 0, tca: 0, etc: 0, methylation: 0, plp: 0, mao: 3 } }
+                ]
+            },
+            {
+                id: 'cognitive',
+                text: "ما هو النمط السائد في مشاكل الذاكرة/التركيز؟",
+                options: [
+                    { text: "ضباب ذهني، صعوبة في تعلم مهارات جديدة (عصبي عضلي)", score: { pyruvate: 3, tca: 0, etc: 0, methylation: 0, plp: 0, mao: 0 } },
+                    { text: "فرط في الأفكار، racing thoughts، لا يمكن إيقاف العقل", score: { pyruvate: 0, tca: 3, etc: 0, methylation: 0, plp: 1, mao: 0 } },
+                    { text: "نسيان مفاجئ، ارتباك، 'لا أعرف أين أنا'", score: { pyruvate: 0, tca: 0, etc: 0, methylation: 3, plp: 0, mao: 0 } },
+                    { text: "صعوبة في اتخاذ القرارات، شعور بالعجز", score: { pyruvate: 0, tca: 0, etc: 0, methylation: 0, plp: 0, mao: 3 } },
+                    { text: "تشتت، قصر فترة الانتباه، hyperactivity ثم انهيار", score: { pyruvate: 0, tca: 0, etc: 1, methylation: 0, plp: 3, mao: 0 } }
+                ]
+            },
+            {
+                id: 'mood',
+                text: "كيف يتجلى اضطراب المزاج الأساسي؟",
+                options: [
+                    { text: "اكتئاب 'خامل'، فقدان الدافع، خمول", score: { pyruvate: 2, tca: 0, etc: 0, methylation: 3, plp: 0, mao: 0 } },
+                    { text: "قلق حاد، panic attacks، شعور بالموت الوشيك", score: { pyruvate: 0, tca: 0, etc: 0, methylation: 0, plp: 3, mao: 0 } },
+                    { text: "غضب مفاجئ، انفجارات، irritability شديد", score: { pyruvate: 0, tca: 2, etc: 0, methylation: 0, plp: 0, mao: 3 } },
+                    { text: "تقلبات سريعة بين فرح حاد واكتئاب عميق", score: { pyruvate: 0, tca: 0, etc: 0, methylation: 0, plp: 0, mao: 3 } },
+                    { text: "عصبية مع حرارة داخلية، أشعر وكأني 'أحترق'", score: { pyruvate: 0, tca: 0, etc: 3, methylation: 0, plp: 0, mao: 0 } }
+                ]
+            },
+            {
+                id: 'physical',
+                text: "ما هي الأعراض الجسدية الأكثر إزعاجاً؟",
+                options: [
+                    { text: "ألم عصبي محيطي، خدر، وخز، صعوبة في المشي", score: { pyruvate: 3, tca: 0, etc: 0, methylation: 3, plp: 0, mao: 0 } },
+                    { text: "تشنجات عضلية، رعشة، تيكات، صرع", score: { pyruvate: 0, tca: 0, etc: 0, methylation: 0, plp: 3, mao: 0 } },
+                    { text: "صداع نصفي، حساسية للضوء، صوت الأصبع يؤلمني", score: { pyruvate: 0, tca: 0, etc: 0, methylation: 0, plp: 0, mao: 3 } },
+                    { text: "تسارع في ضربات القلب مع مجهود بسيط، ضيق تنفس", score: { pyruvate: 0, tca: 0, etc: 3, methylation: 0, plp: 0, mao: 0 } },
+                    { text: "انتفاخ شديد، غازات، إمساك/إسهال متناوب", score: { pyruvate: 2, tca: 0, etc: 0, methylation: 0, plp: 0, mao: 0 } }
+                ]
+            },
+            {
+                id: 'sleep',
+                text: "ما هو نمط اضطراب النوم؟",
+                options: [
+                    { text: "نعاس شديد نهاراً، لكن عند النوم أستيقظ متعباً", score: { pyruvate: 3, tca: 0, etc: 0, methylation: 0, plp: 0, mao: 0 } },
+                    { text: "أرق مع racing thoughts، عقل لا يتوقف", score: { pyruvate: 0, tca: 3, etc: 0, methylation: 0, plp: 1, mao: 0 } },
+                    { text: "استيقاظ مفاجئ مع حرارة، عرق، خفقان", score: { pyruvate: 0, tca: 0, etc: 3, methylation: 0, plp: 0, mao: 0 } },
+                    { text: "نوم سطحي، لا أحصل على deep sleep، لا أحلم", score: { pyruvate: 0, tca: 0, etc: 0, methylation: 3, plp: 0, mao: 0 } },
+                    { text: "تشنجات ليلية، grinding الأسنان، حركة لا إرادية", score: { pyruvate: 0, tca: 0, etc: 0, methylation: 0, plp: 3, mao: 0 } }
+                ]
+            },
+            {
+                id: 'response',
+                text: "ماذا حدث عندما جربت فيتامينات ب من قبل؟",
+                options: [
+                    { text: "B complex أعطاني طاقة ثم انهيار (crash)", score: { pyruvate: 3, tca: 0, etc: 0, methylation: 0, plp: 0, mao: 0 } },
+                    { text: "B6 ساعدني على الاسترخاء لكن B2 جعلني متوتراً", score: { pyruvate: 0, tca: 0, etc: 0, methylation: 0, plp: 3, mao: 2 } },
+                    { text: "Methylated Bs (B9/B12) أعطاني طاقة هائلة ثم أرق شديد", score: { pyruvate: 0, tca: 0, etc: 0, methylation: 3, plp: 0, mao: 0 } },
+                    { text: "Niacin (B3) يسبب لي flushing شديد وصداع", score: { pyruvate: 0, tca: 0, etc: 3, methylation: 0, plp: 0, mao: 0 } },
+                    { text: "لم ألاحظ أي تأثير من أي فيتامين ب", score: { pyruvate: 0, tca: 0, etc: 0, methylation: 0, plp: 0, mao: 3 } }
+                ]
+            }
+        ];
+
+        let currentQuestion = 0;
+        let scores = {
+            pyruvate: 0,
+            tca: 0,
+            etc: 0,
+            methylation: 0,
+            plp: 0,
+            mao: 0
+        };
+
+        function init() {
+            renderQuestion();
+        }
+
+        function renderQuestion() {
+            const container = document.getElementById('questionnaire');
+            const q = questions[currentQuestion];
+            
+            let html = `
+                <div class="question-card active">
+                    <div class="question-number">السؤال ${currentQuestion + 1} من ${questions.length} - تحليل الاختناق</div>
+                    <h3 class="question-text">${q.text}</h3>
+                    <div class="options">
+            `;
+            
+            q.options.forEach((opt, idx) => {
+                html += `
+                    <div class="option" onclick="selectOption(${idx})" data-idx="${idx}">
+                        ${opt.text}
+                    </div>
+                `;
+            });
+            
+            html += `
+                    </div>
+                    <div class="nav-buttons">
+                        <button class="btn-primary" id="nextBtn" onclick="nextQuestion()" disabled>التالي</button>
+                        ${currentQuestion > 0 ? '<button class="btn-secondary" onclick="prevQuestion()">السابق</button>' : '<div></div>'}
+                    </div>
+                </div>
+            `;
+            
+            container.innerHTML = html;
+        }
+
+        function selectOption(idx) {
+            const card = document.querySelector('.question-card.active');
+            const options = card.querySelectorAll('.option');
+            
+            options.forEach((opt, i) => {
+                opt.classList.toggle('selected', i === idx);
+            });
+            
+            card.dataset.selected = idx;
+            document.getElementById('nextBtn').disabled = false;
+        }
+
+        function nextQuestion() {
+            const card = document.querySelector('.question-card.active');
+            const selectedIdx = parseInt(card.dataset.selected);
+            const q = questions[currentQuestion];
+            const selectedScores = q.options[selectedIdx].score;
+            
+            // Add scores
+            for (let enzyme in selectedScores) {
+                scores[enzyme] += selectedScores[enzyme];
+            }
+            
+            if (currentQuestion < questions.length - 1) {
+                currentQuestion++;
+                renderQuestion();
+            } else {
+                calculateRootCause();
+            }
+        }
+
+        function prevQuestion() {
+            if (currentQuestion > 0) {
+                currentQuestion--;
+                renderQuestion();
+            }
+        }
+
+        function calculateRootCause() {
+            // Find highest score
+            let maxScore = 0;
+            let rootEnzyme = '';
+            
+            for (let enzyme in scores) {
+                if (scores[enzyme] > maxScore) {
+                    maxScore = scores[enzyme];
+                    rootEnzyme = enzyme;
+                }
+            }
+            
+            // Check for ties or close seconds
+            const results = Object.entries(scores).sort((a, b) => b[1] - a[1]);
+            const runnerUp = results[1];
+            
+            displayResults(rootEnzyme, results, runnerUp);
+        }
+
+        function displayResults(rootEnzyme, allResults, runnerUp) {
+            document.getElementById('questionnaire').style.display = 'none';
+            document.getElementById('results').style.display = 'block';
+            
+            const data = enzymeData[rootEnzyme];
+            
+            // Highlight in flow chart
+            document.querySelectorAll('.enzyme-node').forEach(node => {
+                if (node.dataset.enzyme === rootEnzyme) {
+                    node.classList.add('root-cause');
+                }
+            });
+            
+            // Fill root cause card
+            document.getElementById('rootEnzyme').textContent = data.arabicName;
+            document.getElementById('rootDescription').textContent = data.description;
+            document.getElementById('rootLocation').textContent = data.location;
+            document.getElementById('rootVitamin').textContent = data.vitamin;
+            document.getElementById('rootStage').textContent = data.stage;
+            
+            // Cascade list
+            const cascadeList = document.getElementById('cascadeList');
+            cascadeList.innerHTML = data.cascade.map(item => `<li>${item}</li>`).join('');
+            
+            // Fix steps
+            const fixSteps = document.getElementById('fixSteps');
+            fixSteps.innerHTML = data.fix.map(step => `
+                <div class="fix-step">
+                    <div class="step-number">${step.step}</div>
+                    <div class="step-content">
+                        <h4>${step.title}</h4>
+                        <p>${step.desc}</p>
+                    </div>
+                </div>
+            `).join('');
+            
+            // Warning
+            document.getElementById('clinicalWarning').innerHTML = `<strong>تحذير:</strong> ${data.warning}`;
+            
+            // If runner up is close (within 2 points), mention it
+            if (runnerUp[1] >= maxScore - 2 && runnerUp[0] !== rootEnzyme) {
+                const runnerData = enzymeData[runnerUp[0]];
+                const warningDiv = document.querySelector('.warning-box');
+                warningDiv.innerHTML += `
+                    <hr style="margin: 1rem 0; border-color: rgba(255,255,255,0.1);">
+                    <p style="margin-top: 1rem;"><strong>ملاحظة:</strong> هناك احتمالية قوية لوجود اختناق ثانوي في ${runnerData.arabicName} (${runnerData.vitamin}). 
+                    بعد 4-6 أسابيع من معالجة الاختناق الجذري، أعد التقييم لمعرفة ما إذا كان الاختناق الثانوي قد تحسن تلقائياً أو يحتاج لدعم إضافي.</p>
+                `;
+            }
+            
+            window.scrollTo(0, 0);
+        }
+
+        function restartAssessment() {
+            currentQuestion = 0;
+            scores = {
+                pyruvate: 0,
+                tca: 0,
+                etc: 0,
+                methylation: 0,
+                plp: 0,
+                mao: 0
+            };
+            
+            document.querySelectorAll('.enzyme-node').forEach(node => {
+                node.classList.remove('root-cause');
+            });
+            
+            document.getElementById('results').style.display = 'none';
+            document.getElementById('questionnaire').style.display = 'block';
+            
+            init();
+        }
+
+        init();
+    </script>
+</body>
+</html>
